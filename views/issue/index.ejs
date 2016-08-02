@@ -1,0 +1,12 @@
+<% include ../common/header.ejs %>
+<% posts.forEach(function(post,index){  %>
+<p><h2><a href="blog/<%= post.username %>/<%= post.time.day %>/<%= post.title %>"><%= post.title %></a></h2></p>
+<p class="info">
+	作者：<a href="blog/<%= post.username %>"><%= post.username %></a> |
+	日期：<%= post.time.minute %>
+</p>
+<%- post.post %>
+<% }) %>
+</article>
+<% include ../page.ejs %>
+<% include ../common/footer.ejs %>

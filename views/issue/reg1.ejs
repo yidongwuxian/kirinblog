@@ -1,0 +1,44 @@
+<% include ../common/header.ejs %>
+<form method="post" name="regForm" ng-controller="regController">
+  <div>
+  	<label class="form_tr">用户名：</label>
+  	<input type="text" id="username" name="username" ng-model="appcontroller.username" required
+       ng-minlength="4" />
+    <span class="c-red" ng-show="regForm.username.$error.required">
+      * 用户名不为空！
+    </span>
+    <span class="c-red" ng-show="regForm.username.$error.minlength">
+      * 用户名最少不少于4位！
+    </span>
+  </div>
+  <div>
+    <label class="form_tr">密码：</label>
+  	<input type="password" id="password" name="password" ng-model="appcontroller.password" required />
+    <span class="c-red" ng-show="regForm.password.$error.required">
+      * 密码不为空！
+    </span>
+  </div>
+  <div>
+  	<label class="form_tr">确认密码：</label>
+  	<input type="password" id="repassword" name="repassword" ng-model="appcontroller.repassword" required />
+    <span class="c-red" ng-show="regForm.repassword.$error.required">
+      * 确认密码不为空！
+    </span>
+  </div>
+  <div>
+  	<label class="form_tr">邮箱：</label>
+  	<input type="email" id="email" name="email" ng-model="appcontroller.email" required />
+    <span class="c-red" ng-show="regForm.email.$error.required">
+      * 邮箱不为空！
+    </span>
+  </div>
+  <div>
+  	<input id="registerForm" class="form_btn_blue" type="submit" value="注册" ng-disabled="regForm.$invalid" />
+  </div>
+</form>
+</article>
+<% include ../common/footer.ejs %>
+<script>
+var myApp = angular.module('myApp',[]);
+myApp.controller('regController', function(){});
+</script>

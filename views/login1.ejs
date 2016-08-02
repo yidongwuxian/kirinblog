@@ -1,0 +1,27 @@
+<% include common/header.ejs %>
+<%- message %>
+<form method="post" name="loginForm">
+  <div>
+  	<label class="form_tr">用户名：</label>
+  	<input type="text" id="username" name="username" ng-model="appcontroller.username" required
+       ng-minlength="4" />
+    <span class="c-red" ng-show="loginForm.username.$error.required">
+      * 用户名不为空！
+    </span>
+    <span class="c-red" ng-show="loginForm.username.$error.minlength">
+      * 用户名最少不少于4位！
+    </span>
+  </div>
+  <div>
+  	<label class="form_tr">密码：</label>  
+  	<input type="password" id="password" name="password" ng-model="appcontroller.password" required />
+    <span class="c-red" ng-show="loginForm.password.$error.required">
+      * 密码不为空！
+    </span>
+  </div>
+  <div>
+    <input id="loginForm" class="form_btn_blue" type="submit" value="登录" ng-disabled="loginForm.$invalid" />
+  </div>
+</form>
+</article>
+<% include common/footer.ejs %>

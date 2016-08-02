@@ -1,0 +1,17 @@
+<% include common/header.ejs %>
+<%- message %>
+<form method="post">
+  <div>
+  	<label class="form_tr">用户名：</label>
+  	<input type="text" id="username" name="username" />
+  </div>
+  <div>
+  	<label class="form_tr">密码：</label>
+  	<input type="password" id="password" name="password" />
+  </div>
+  <div>
+    <input id="loginForm" class="form_btn_blue" type="submit" value="登录" />
+  </div>
+</form>
+</article>
+<% include common/footer.ejs %>

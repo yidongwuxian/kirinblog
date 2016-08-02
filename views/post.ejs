@@ -1,0 +1,15 @@
+<% include common/header.ejs %>
+<form method="post">
+  <div>
+    <label>标题：</label><br />  
+    <input type="text" name="title" />
+  </div>
+  <div>
+    <label>正文：</label><br />      
+    <textarea name="post" rows="20" cols="100"></textarea><br />
+  </div>
+  <div>    
+    <input id="postForm" type="submit" value="发表"/>
+  </div>
+</form>
+<% include common/footer.ejs %>
