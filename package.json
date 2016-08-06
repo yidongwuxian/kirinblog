@@ -19,7 +19,6 @@
     "express-session": "^1.13.0",
     "log4js": "*",
     "markdown": "0.5.0",
-    "marked":"latest",
     "method-override": "latest",
     "mongodb": "latest",
     "mongoose": "latest",
@@ -29,8 +28,8 @@
     "serve-favicon": "2.1.5",
     "mkdirp": "latest",
     "fs": "latest",
-    "node-markdown": "latest",
-    "markdown-js": ">= 0.0.1"
+    "gravatar": "1.1.0",
+    "generic-pool": "2.1.1"  
   },
   "devDependencies": {
     "grunt": "~0.4.0",

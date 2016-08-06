@@ -1,7 +1,9 @@
 var issue            = require('./issue');
-var domain           = require( 'domain' );             //引入domain
+var domain           = require( 'domain' );                //引入domain
 var Domain           = domain.create();
-var gadget           = require( '../tool/gadget' );     //引入日志记录
+var gravatar         = require('gravatar');              //头像
+var crypto           = require('crypto');               //md5加密
+var gadget           = require( '../tool/gadget' );    //引入日志记录
 var uploadController = require('../controls/uploadController');
 var Post             = require('../models/post.js');
 var User             = require('../models/user.js');
@@ -49,7 +51,7 @@ exports.all = function(app){
 	        res.render('issue/home', {title: 'home'});
 	    }else{
 	        req.session.error = '请先登录';
-	        res.render('login', { title: '登录'});
+	        res.render('login', {title: '登录'});
 	    }
 	});
 
@@ -77,8 +79,9 @@ exports.all = function(app){
 
 	app.post('/post', checkLogin);
 	app.post('/post', function(req, res) {
-	    var currentUser = req.session.user;
-	    var post = new Post(currentUser.username, req.body.title, req.body.post);
+	    var currentUser = req.session.user,
+            tags = [req.body.tag1, req.body.tag2, req.body.tag3],
+	        post = new Post(currentUser.username, currentUser.head, req.body.title, tags, req.body.post);
 	    post.save(function(err){
 	    	if(err){
 	    		req.flash('error',err);
@@ -112,6 +115,31 @@ exports.all = function(app){
 	    req.flash('success','退出成功！');
 	    return res.redirect('/');
 	});
+
+    app.get('/links', function(req, res){
+        res.render('links', {
+            title: '友情链接',
+            user:  req.session.user,
+            success: req.flash('success').toString(),
+            error: req.flash('error').toString()
+        });
+    });
+
+    app.get('/search', function(req, res){
+        Post.search(req.query.keyword, function(err, posts){
+            if(err){
+                req.flash('error', err);
+                return res.redirect('/');
+            }
+            res.render('search',{
+                title: "输入关键字搜索:" +req.query.keyword,
+                posts: posts,
+                user:  req.session.user,
+                success: req.flash('success').toString(),
+                error: req.flash('error').toString()
+            });
+        });
+    });
 
 	app.get('/blog/:username', function(req, res){
 		var page = parseInt(req.query.p) || 1;
@@ -157,16 +185,24 @@ exports.all = function(app){
 	});
 
 	app.post('/blog/:username/:day/:title', function(req, res){
-		var date = new Date(),
-			time = date.getFullYear() + "-" + (date.getMonth() + 1) + "-" + date.getDate() + "" +
-				   date.getHours() + ":" + (date.getMinutes() < 10 ? '0' + date.getMinutes() : date.getMinutes());
-	    var comment = {
+
+        var date = new Date(),
+            time = date.getFullYear() + "-" + (date.getMonth() + 1) + "-" + date.getDate() + " " +
+                   date.getHours() + ":" + (date.getMinutes() < 10 ? '0' + date.getMinutes() : date.getMinutes());
+
+        var md5  = crypto.createHash('md5'),
+       email_MD5 = md5.update(req.body.email.toLowerCase()).digest('hex'),
+            head = "http://cn.gravatar.com/avatar/" + email_MD5 + "?s=48";
+
+        var comment = {
 	    	username: req.body.username,
+            head:     head,
 	    	email:    req.body.email,
 	    	website:  req.body.website,
 	    	time:     time,
 	    	content:  req.body.content
 	    };
+
 	    var newComment = new Comment(req.params.username, req.params.day, req.params.title, comment);
 	    newComment.save(function(err){
 	    	if(err){
@@ -222,6 +258,80 @@ exports.all = function(app){
 			res.redirect('/');
 		});
 	});
+
+    app.get('/reprint/:username/:day/:title', checkLogin);
+      app.get('/reprint/:username/:day/:title', function (req, res) {
+        Post.edit(req.params.username, req.params.day, req.params.title, function (err, post) {
+          if (err) {
+            req.flash('error', err);
+            return res.redirect('back');
+          }
+          var currentUser = req.session.user,
+              reprint_from = { username: post.username, day: post.time.day, title: post.title},
+              reprint_to   = { username: currentUser.username, head: currentUser.head};
+          Post.reprint(reprint_from, reprint_to, function (err, post) {
+            if (err) {
+              req.flash('error', err);
+              return res.redirect('back');
+            }
+            req.flash('success', '转载成功!');
+            var url = encodeURI('/blog/' + post.username + '/' + post.time.day + '/' + post.title);
+            res.redirect(url);
+          });
+        });
+      });
+
+    app.get('/archive', function(req, res){
+        Post.getArchive(function(err, posts){
+            if(err){
+                req.flash('error', err);
+                return res.redirect('/');
+            }
+            res.render('archive', {
+                title: '存档',
+                posts: posts,
+                user:  req.session.user,
+                success: req.flash('success').toString(),
+				error: req.flash('error').toString()
+            });
+        });
+    });
+
+    app.get('/tags', function (req, res) {
+        Post.getTags(function (err, posts) {
+          if (err) {
+            req.flash('error', err);
+            return res.redirect('/');
+          }
+          res.render('tags', {
+            title:   '标签',
+            posts:   posts,
+            user:    req.session.user,
+            success: req.flash('success').toString(),
+            error:   req.flash('error').toString()
+          });
+        });
+    });
+
+    app.get('/tags/:tag', function(req, res){
+        Post.getTag(req.params.tag, function(err, posts){
+            if(err){
+                req.flash('error', err);
+                return res.redirect('/');
+            }
+            res.render('tag',{
+                title: 'TAG:' + req.params.tag,
+                posts: posts,
+                user:  req.session.user,
+                success: req.flash('success').toString(),
+                error:   req.flash('error').toString()
+            });
+        });
+    });
+
+    app.use(function(req, res){
+        res.render("404");
+    });
 
 	function checkLogin(req,res,next){
 		if(!req.session.user){

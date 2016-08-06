@@ -1,9 +1,11 @@
 var mongodb  = require('./db');
 var markdown = require('markdown').markdown;
 
-function Post(username, title, post) {
+function Post(username, head, title, tags, post) {
   this.username        = username;
+  this.head            = head;
   this.title           = title;
+  this.tags            = tags;
   this.post            = post;
 }
 
@@ -24,10 +26,14 @@ Post.prototype.save = function(callback) {
   //要存入数据库的文档
   var post = {
       username:       this.username,
+      head:           this.head,
       time:           time,
       title:          this.title,
+      tags:           this.tags,
       post:           this.post,
-      comment:        []
+      comment:        [],
+      reprint_info:   {},
+      pv:             0
   };
 
   //打开数据库
@@ -120,6 +126,18 @@ Post.getOne = function(username, day, title, callback) {
         }
         //解析 markdown 为 html
         if(doc){
+            collection.update({
+                "username": username,
+                "time.day": day,
+                "title": title
+            },{
+                $inc: {"pv": 1}
+            },function(err){
+                mongodb.close();
+                if(err){
+                    return callback(err);
+                }
+            });
             doc.post = markdown.toHTML(doc.post);
             if(doc.comments){
                 doc.comments.forEach(function(comment){
@@ -198,6 +216,40 @@ Post.remove = function(username, day, title, callback){
         mongodb.close();
         return callback(err);
       }
+      collection.findOne({
+          "username": username,
+          "time.day": day,
+          "title":    title
+      }, function(err, doc){
+          if(err){
+              mongodb.close();
+              return callback(err);
+          }
+          var reprint_from = "";
+          if(doc.reprint_info.reprint_from){
+              reprint_from = doc.reprint_info.reprint_from;
+          }
+          if(reprint_from !=""){
+              collection.update({
+                  "username": reprint_from.username,
+                  "time.day": reprint_from.day,
+                  "title":    reprint_from.title
+              },{
+                  $pull: {
+                      "reprint_info.reprint_to": {
+                          "username": username,
+                          "day":      day,
+                          "title":    title
+                      }
+                  }
+              }, function(err){
+                  if(err){
+                      mongodb.close();
+                      return callback(err);
+                  }
+              });
+          }
+      });
       collection.remove({
         "username": username,
         "time.day": day,
@@ -214,3 +266,182 @@ Post.remove = function(username, day, title, callback){
     });
   });
 }
+//返回所有文章存档信息
+Post.getArchive = function(callback){
+    mongodb.open(function(err, db){
+        if(err){
+            return callback(err);
+        }
+        db.collection('posts', function(err, collection){
+            if(err){
+                mongodb.close();
+                return callback(err);
+            }
+            collection.find({}, {
+                "username": 1,
+                "title": 1,
+                "time": 1
+            }).sort({ time: -1 }).toArray(function(err, docs){
+                mongodb.close();
+                if(err){
+                    return callback(err);
+                }
+                callback(null, docs);
+            });
+        });
+    });
+}
+//返回所有标签
+Post.getTags = function(callback){
+    mongodb.open(function(err, db){
+        if(err){
+            return callback(err);
+        }
+        db.collection('posts', function(err, collection){
+            if(err){
+                mongodb.close();
+                return callback(err);
+            }
+            collection.distinct("tags", function (err, docs) {
+                mongodb.close();
+                if(err){
+                    return callback(err);
+                }
+                callback(null, docs);
+            });
+        });
+    });
+}
+//返回含有特定标签的所有文章
+Post.getTag = function(tag, callback){
+    mongodb.open(function(err, db){
+        if(err){
+            return callback(err);
+        }
+        db.collection('posts', function(err, collection){
+            if(err){
+                mongodb.close();
+                return callback(err);
+            }
+            collection.find({"tags": tag},
+            {
+                "username": 1,
+                "time":     1,
+                "title":    1
+            }).sort({
+                time: -1
+            }).toArray(function(err, docs){
+                mongodb.close();
+                if(err){
+                    return callback(err);
+                }
+                callback(null, docs);
+            });
+        });
+    });
+}
+//返回通过标题关键字查询的所有文章信息
+Post.search = function(keyword, callback){
+    mongodb.open(function(err, db){
+        if(err){
+            return callback(err);
+        }
+        db.collection('posts', function(err, collection){
+            if(err){
+                mongodb.close();
+                return callback(err);
+            }
+            var pattern = new RegExp(keyword, "i");
+            collection.find({
+                "title": pattern
+            },{
+                "username": 1,
+                "time":     1,
+                "title":    1
+            }).sort({
+                time: -1
+            }).toArray(function(err, docs){
+                mongodb.close();
+                if(err){
+                    return callback(err);
+                }
+                callback(null, docs);
+            });
+        });
+    })
+}
+//转载一篇文章
+Post.reprint = function(reprint_from, reprint_to, callback) {
+  mongodb.open(function (err, db) {
+    if (err) {
+      return callback(err);
+    }
+    db.collection('posts', function (err, collection) {
+      if (err) {
+        mongodb.close();
+        return callback(err);
+      }
+      //找到被转载的文章的原文档
+      collection.findOne({
+        "username": reprint_from.username,
+        "time.day": reprint_from.day,
+        "title": reprint_from.title
+      }, function (err, doc) {
+        if (err) {
+          mongodb.close();
+          return callback(err);
+        }
+
+        var date = new Date();
+        var time = {
+            date: date,
+            year : date.getFullYear(),
+            month : date.getFullYear() + "-" + (date.getMonth() + 1),
+            day : date.getFullYear() + "-" + (date.getMonth() + 1) + "-" + date.getDate(),
+            minute : date.getFullYear() + "-" + (date.getMonth() + 1) + "-" + date.getDate() + " " +
+            date.getHours() + ":" + (date.getMinutes() < 10 ? '0' + date.getMinutes() : date.getMinutes())
+        }
+
+        delete doc._id;
+
+        doc.username = reprint_to.username;
+        doc.head = reprint_to.head;
+        doc.time = time;
+        doc.title = (doc.title.search(/[转载]/) > -1) ? doc.title : "[转载]" + doc.title;
+        doc.comments = [];
+        doc.reprint_info = {"reprint_from": reprint_from};
+        doc.pv = 0;
+
+        //更新被转载的原文档的 reprint_info 内的 reprint_to
+        collection.update({
+          "username": reprint_from.username,
+          "time.day": reprint_from.day,
+          "title": reprint_from.title
+        }, {
+          $push: {
+            "reprint_info.reprint_to": {
+              "username": doc.username,
+              "day": time.day,
+              "title": doc.title
+          }}
+        }, function (err) {
+          if (err) {
+            mongodb.close();
+            return callback(err);
+          }
+        });
+
+        //将转载生成的副本修改后存入数据库，并返回存储后的文档
+        collection.insert(doc, {
+          safe: true
+        }, function (err, post) {
+          mongodb.close();
+          if (err) {
+            return callback(err);
+          }
+          callback(err, post['ops'][0]);
+        });
+      });
+    });
+  });
+};

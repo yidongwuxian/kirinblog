@@ -4,11 +4,51 @@
     <span><a class="edit" href="/edit/<%= post.username %>/<%= post.time.day %>/<%= post.title %>">编辑</a></span>
     <span><a class="edit" href="/remove/<%= post.username %>/<%= post.time.day %>/<%= post.title %>">删除</a></span>
     <% } %>
+    <% var flag = 1 %>
+    <% if (user && (user.username != post.username)) { %>
+      <% if ((post.reprint_info.reprint_from != undefined) && (user.username == post.reprint_info.reprint_from.username)) { %>
+        <% flag = 0 %>
+      <% } %>
+      <% if ((post.reprint_info.reprint_to != undefined)) { %>
+        <% post.reprint_info.reprint_to.forEach(function (reprint_to) { %>
+          <% if (user.username == reprint_to.username) { %>
+            <% flag = 0 %>
+          <% } %>
+        <% }) %>
+      <% } %>
+    <% } else { %>
+      <% flag = 0 %>
+    <% } %>
+    <% if (flag) { %>
+      <span><a class="edit" href="/reprint/<%= post.username %>/<%= post.time.day %>/<%= post.title %>">转载</a></span>
+    <% } %>
 </p>
 <p class="info">
   作者：<a href="/blog/<%= post.username %>"><%= post.username %></a> |
-  日期：<%= post.time.minute %>
+  日期：<%= post.time.minute %> |
+  标签：
+  <% post.tags.forEach(function(tag){ %>
+      <% if(tag){ %>
+          <a class="tag" href="/tags/<%= tag %>"><%= tag %></a>
+      <% } %>
+  <% }) %>
+  <% if (post.reprint_info.reprint_from) { %>
+    <br><a href="/blog/<%= post.reprint_info.reprint_from.username %>/<%= post.reprint_info.reprint_from.day %>/<%= post.reprint_info.reprint_from.title %>">原文链接</a>
+  <% } %>
 </p>
 <p><%- post.post %></p>
+<p class="info">
+    阅读: <%= post.pv %> |
+    评论：
+    <% if(post.comments) { %>
+        <%= post.comments.length %>
+    <% } %>             |
+    转载：
+    <% if (post.reprint_info.reprint_to) { %>
+        <%= post.reprint_info.reprint_to.length %>
+    <% } else { %>
+        <%= 0 %>
+    <% } %>
+</p>
 <% include comment.ejs %>
 <% include common/footer.ejs %>

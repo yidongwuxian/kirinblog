@@ -13,17 +13,18 @@ module.exports = Comment;
 Comment.prototype.save = function(callback) {
   var date = new Date();
   var time = {
-        date:    date,
-        year :   date.getFullYear(),
-        month :  date.getFullYear() + "-" + (date.getMonth() + 1),
-        day :    date.getFullYear() + "-" + (date.getMonth() + 1) + "-" + date.getDate(),
-        minute : date.getFullYear() + "-" + (date.getMonth() + 1) + "-" + date.getDate() + " " +
-        date.getHours() + ":" + (date.getMinutes() < 10 ? '0' + date.getMinutes() : date.getMinutes())
+      date:    date,
+      year:    date.getFullYear(),
+      month:   date.getFullYear() + "-" + (date.getMonth() + 1),
+      day:     date.getFullYear() + "-" + (date.getMonth() + 1) + "-" + date.getDate(),
+      minute:  date.getFullYear() + "-" + (date.getMonth() + 1) + "-" + date.getDate() + " " +
+               date.getHours() + ":" + (date.getMinutes() < 10 ? '0' + date.getMinutes() : date.getMinutes())
   }
-  var username = this.username,
-      day      = this.day,
-      title    = title,
-      comment  = this.comment;
+
+  var username    = this.username,
+      day         = this.day,
+      title       = this.title,
+      comment     = this.comment;
 
   mongodb.open(function(err, db){
       if(err){

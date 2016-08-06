@@ -1,11 +1,14 @@
 var express        = require('express');
+var fs             = require('fs');
+var accessLog      = fs.createWriteStream('access.log', {flags: 'a'});
+var errorLog       = fs.createWriteStream('error.log',  {flags: 'a'});
 var app            = express();
 var crypto         = require('crypto');
 var User           = require('./models/user.js');
 var routes         = require( './routes' );
 var settings       = require('./settings');
 var flash          = require('connect-flash');
-var morgan         = require( 'morgan' );
+var logger         = require( 'morgan' );
 var bodyParser     = require( 'body-parser' );
 var methodOverride = require( 'method-override' );
 var http           = require( 'http' );
@@ -28,10 +31,17 @@ app.set( 'view engine', 'ejs' );
 //页面通知（即成功与错误信息的显示）的功能
 app.use(flash());
 app.use( express.static( path.join( __dirname, 'public' ))); //静态文件路径
+//记录错误日志
+app.use(function(err, req, res, next){
+    var meta = '['+ new Date() +']' + req.url + '\n';
+    errorLog.write(meta + err.stack + '\n');
+    next();
+});
 //定义icon图标
 app.use(favicon(__dirname + '/public/imgs/favicon.ico'));
 //定义日志和输出级别
-app.use(morgan('dev'));
+app.use(logger('dev'));
+app.use(logger({stream: accessLog}));
 //定义数据解析器
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
@@ -39,7 +49,7 @@ app.use(bodyParser.urlencoded({ extended: false }));
 app.use(session({
   secret: settings.cookieSecret,
   key: settings.db,
-  cookie: {maxAge: 1000 * 60 * 60 }, //30 days
+  cookie: {maxAge: 1000 * 60 * 60 }, 
   resave: true,
   saveUninitialized: false,
   store: new MongoStore({
